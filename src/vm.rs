@@ -1,13 +1,17 @@
-use std::{ptr::null_mut, sync::LazyLock};
+use std::ptr::null_mut;
 
 use crate::{
     chunk::{Chunk, OpCode},
     value::Value,
 };
 
+const STACK_MAX: usize = 256;
+
 struct Vm {
     chunk: *mut Chunk,
     instruction_pointer: *mut u8,
+    stack: [Value; STACK_MAX],
+    stack_top: *mut Value,
 }
 
 // TODO: not really send and sync, but we do this to make it a global static.
@@ -20,10 +24,36 @@ unsafe impl Send for Vm {}
 static mut VM: Vm = Vm {
     chunk: null_mut(),
     instruction_pointer: null_mut(),
+    stack: [0.0; STACK_MAX],
+    stack_top: null_mut(),
 };
 
+fn reset_stack() {
+    unsafe {
+        VM.stack_top = &mut VM.stack[0] as *mut Value;
+    }
+}
+
+fn push(value: Value) {
+    unsafe {
+        *VM.stack_top = value;
+    }
+    unsafe {
+        VM.stack_top = VM.stack_top.offset(1);
+    }
+}
+
+fn pop() -> Value {
+    unsafe {
+        VM.stack_top = VM.stack_top.offset(-1);
+    }
+    unsafe { *VM.stack_top }
+}
+
 // These methods might be a little too "C" and should be converted to a more rust styld.
-pub fn init_vm() {}
+pub fn init_vm() {
+    reset_stack();
+}
 
 pub fn free_vm() {}
 
@@ -53,6 +83,14 @@ fn run() -> Result<(), InterpretError> {
     loop {
         #[cfg(feature = "debug_trace_execution")]
         {
+            print!("          ");
+            let mut slot = unsafe { &mut VM.stack[0] as *mut Value };
+            while slot != unsafe { VM.stack_top } {
+                print!("[ {} ]", unsafe { *slot });
+                slot = unsafe { slot.add(1) };
+            }
+            println!();
+
             let chunk = unsafe { &mut *VM.chunk };
             let diff = unsafe { VM.instruction_pointer.offset_from(chunk.code) };
             unsafe {
@@ -63,9 +101,12 @@ fn run() -> Result<(), InterpretError> {
         match instruction {
             OpCode::OpConstant => {
                 let constant = read_constant();
-                println!("{constant}");
+                push(constant);
             }
-            OpCode::OpReturn => return Ok(()),
+            OpCode::OpReturn => {
+                println!("{}", pop());
+                return Ok(());
+            }
         }
     }
 }
