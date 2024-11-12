@@ -7,15 +7,26 @@ use crate::{
 
 #[repr(u8)]
 pub enum OpCode {
-    OpConstant = 0,
-    OpReturn = 1,
+    Constant = 0,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Negate,
+    Return,
 }
 
 impl From<u8> for OpCode {
     fn from(value: u8) -> Self {
         match value {
-            0 => OpCode::OpConstant,
-            1 => OpCode::OpReturn,
+            // TODO: this is getting a bit ugly. Should I look for a library for this?
+            0 => OpCode::Constant,
+            1 => OpCode::Add,
+            2 => OpCode::Subtract,
+            3 => OpCode::Multiply,
+            4 => OpCode::Divide,
+            5 => OpCode::Negate,
+            6 => OpCode::Return,
             _ => panic!("unexpected value {value} for OpCode"),
         }
     }

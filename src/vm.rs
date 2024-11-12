@@ -80,6 +80,16 @@ fn run() -> Result<(), InterpretError> {
         unsafe { *chunk.constants.values.add(read_byte() as usize) }
     }
 
+    macro_rules! binary_op {
+        ($op:tt) => {
+            {
+                let b = pop();
+                let a = pop();
+                push(a $op b);
+            }
+        };
+    }
+
     loop {
         #[cfg(feature = "debug_trace_execution")]
         {
@@ -99,11 +109,18 @@ fn run() -> Result<(), InterpretError> {
         }
         let instruction: OpCode = read_byte().into();
         match instruction {
-            OpCode::OpConstant => {
+            OpCode::Constant => {
                 let constant = read_constant();
                 push(constant);
             }
-            OpCode::OpReturn => {
+            OpCode::Negate => {
+                push(-pop());
+            }
+            OpCode::Add => binary_op!(+),
+            OpCode::Subtract => binary_op!(-),
+            OpCode::Multiply => binary_op!(*),
+            OpCode::Divide => binary_op!(/),
+            OpCode::Return => {
                 println!("{}", pop());
                 return Ok(());
             }

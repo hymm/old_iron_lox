@@ -1,5 +1,6 @@
 use crate::chunk::{Chunk, OpCode};
 
+#[allow(unused)]
 impl Chunk {
     pub fn disassemble_chunk(&self, name: &'static str) {
         println!("== {} ==", name);
@@ -23,8 +24,13 @@ impl Chunk {
         // SAFETY: is ensured by caller
         let instruction: OpCode = unsafe { *self.code.byte_offset(offset) }.into();
         match instruction {
-            OpCode::OpReturn => simple_instruction("OpReturn", offset),
-            OpCode::OpConstant => self.constant_instruction("OpConstant", offset),
+            OpCode::Return => simple_instruction("Return", offset),
+            OpCode::Add => simple_instruction("Add", offset),
+            OpCode::Subtract => simple_instruction("Subtract", offset),
+            OpCode::Multiply => simple_instruction("Multiply", offset),
+            OpCode::Divide => simple_instruction("Divide", offset),
+            OpCode::Constant => self.constant_instruction("Constant", offset),
+            OpCode::Negate => simple_instruction("Negate", offset),
         }
     }
 
