@@ -1,6 +1,9 @@
 [package]
+edition = "2021"
 name = "old_iron_lox"
 version = "0.1.0"
-edition = "2021"
+
+[features]
+debug_trace_execution = []
 
 [dependencies]

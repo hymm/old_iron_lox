@@ -9,7 +9,7 @@ pub type Value = f64;
 pub struct ValueArray {
     pub capacity: usize,
     pub count: usize,
-    values: *mut Value,
+    pub values: *mut Value,
 }
 
 impl ValueArray {

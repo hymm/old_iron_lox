@@ -12,7 +12,7 @@ impl Chunk {
 
     /// SAFETY:
     /// - offset cannot go outside of the allocation of chuck
-    unsafe fn disassemble_instruction(&self, offset: isize) -> isize {
+    pub unsafe fn disassemble_instruction(&self, offset: isize) -> isize {
         print!("{:04} ", offset);
         if offset > 0 && unsafe { *self.lines.offset(offset) == *self.lines.offset(offset - 1) } {
             print!("   | ");
