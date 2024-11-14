@@ -2,6 +2,7 @@ use std::ptr::null_mut;
 
 use crate::{
     chunk::{Chunk, OpCode},
+    compiler::compile,
     value::Value,
 };
 
@@ -58,11 +59,9 @@ pub fn init_vm() {
 pub fn free_vm() {}
 
 // should consider making this lifetimed
-pub fn interpret(chunk: *mut Chunk) -> Result<(), InterpretError> {
-    unsafe { VM.chunk = chunk };
-    unsafe { VM.instruction_pointer = (*chunk).code };
-
-    run()
+pub fn interpret(source: &str) -> Result<(), InterpretError> {
+    compile(source);
+    Ok(())
 }
 
 fn run() -> Result<(), InterpretError> {
