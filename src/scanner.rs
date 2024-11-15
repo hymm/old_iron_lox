@@ -208,7 +208,7 @@ impl Token {
         }
     }
 
-    fn error(message: &'static str, line: usize) -> Token {
+    pub fn error(message: &'static str, line: usize) -> Token {
         Token {
             typee: Error,
             token_union: TokenUnion { message },
@@ -224,7 +224,7 @@ impl Token {
         }
     }
 
-    fn message(&self) -> &'static str {
+    pub fn message(&self) -> &'static str {
         match self.typee {
             Error => unsafe { self.token_union.message },
             _ => panic!("Can't get message on not TokenType::Error"),
@@ -232,7 +232,7 @@ impl Token {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TokenType {
     LeftParen,
     RightParen,

@@ -60,8 +60,21 @@ pub fn free_vm() {}
 
 // should consider making this lifetimed
 pub fn interpret(source: &str) -> Result<(), InterpretError> {
-    compile(source);
-    Ok(())
+    let mut chunk = Chunk::new();
+
+    if !compile(source, &mut chunk) {
+        chunk.free_chunk();
+    }
+
+    unsafe {
+        VM.chunk = &mut chunk as *mut Chunk;
+        VM.instruction_pointer = (*VM.chunk).code;
+    }
+
+    let result = run();
+
+    chunk.free_chunk();
+    result
 }
 
 fn run() -> Result<(), InterpretError> {
