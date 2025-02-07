@@ -82,8 +82,8 @@ impl Chunk {
         *self = Self::new();
     }
 
-    pub fn add_constant(&mut self, value: Value) -> u8 {
+    pub fn add_constant(&mut self, value: Value) -> usize {
         self.constants.write_value_array(value);
-        (self.constants.count - 1) as u8
+        self.constants.count - 1
     }
 }
