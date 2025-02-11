@@ -1,4 +1,7 @@
 use std::ptr::null_mut;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
+
 
 use crate::{
     chunk::{Chunk, OpCode},
@@ -24,32 +27,36 @@ pub fn compile(source: &str, chunk: &mut Chunk) -> bool {
 
     // Note: having trouble naming this type, so not able to store it in Parser, so
     // just explicitly passing it to methods instead
-    let mut token_iter = std::iter::from_coroutine(scan(source)).peekable();
+    let token_iter = std::iter::from_coroutine(scan(source)).peekable();
     let mut parser = Parser {
         current: Token::error("uninitialized", 0),
         previous: Token::error("uninitialized", 0),
         had_error: false,
         panic_mode: false,
+        token_iter: Box::new(token_iter),
+        source,
     };
-    parser.advance(&mut token_iter);
+    parser.advance();
     parser.expression();
-    parser.consume(&mut token_iter, TokenType::Eof, "Expect end of expression");
+    parser.consume(TokenType::Eof, "Expect end of expression");
     parser.end_compiler();
     !parser.had_error
 }
 
-struct Parser {
+struct Parser<'iter> {
     current: Token,
     previous: Token,
     had_error: bool,
     panic_mode: bool,
+    token_iter: Box<dyn Iterator<Item = Token> + 'iter>,
+    source: &'iter str,
 }
 
-impl Parser {
-    fn advance(&mut self, token_iter: &mut impl Iterator<Item = Token>) {
+impl<'iter> Parser<'iter> {
+    fn advance(&mut self) {
         std::mem::swap(&mut self.previous, &mut self.current);
         loop {
-            let Some(token) = token_iter.next() else {
+            let Some(token) = self.token_iter.next() else {
                 return;
             };
 
@@ -62,14 +69,9 @@ impl Parser {
         }
     }
 
-    fn consume(
-        &mut self,
-        token_iter: &mut impl Iterator<Item = Token>,
-        token: TokenType,
-        message: &'static str,
-    ) {
+    fn consume(&mut self, token: TokenType, message: &'static str) {
         if self.current.typee == token {
-            token_iter.next();
+            self.token_iter.next();
             return;
         }
 
@@ -89,18 +91,35 @@ impl Parser {
         self.emit_return();
     }
 
-    fn grouping(&mut self, token_iter: &mut impl Iterator<Item = Token>) {
+    fn binary(&mut self) {
+        let operator_type = self.previous.typee;
+        let ParseRule((_, _, precedence)) = operator_type.rule();
+        self.parse_precedence(precedence.next());
+
+        match operator_type {
+            Plus => self.emit_byte(OpCode::Add as u8),
+            Minus => self.emit_byte(OpCode::Subtract as u8),
+            Star => self.emit_byte(OpCode::Multiply as u8),
+            Slash => self.emit_byte(OpCode::Divide as u8),
+            _ => unreachable!(),
+        }
+    }
+
+    fn grouping(&mut self) {
         self.expression();
-        self.consume(token_iter, RightParen, "Expect ')' after expression.");
+        self.consume(RightParen, "Expect ')' after expression.");
     }
 
     fn expression(&mut self) {
         self.parse_precedence(Precedence::Assignment);
     }
 
-    fn number(&mut self, source: &str) {
+    fn number(&mut self) {
         let start = self.previous.start();
-        let str_value = source.get(start..start + self.previous.length).unwrap();
+        let str_value = self
+            .source
+            .get(start..start + self.previous.length)
+            .unwrap();
         let value: f64 = str_value.parse::<f64>().unwrap();
         self.emit_constant(value);
     }
@@ -116,7 +135,24 @@ impl Parser {
         }
     }
 
-    fn parse_precedence(&mut self, precedence: Precedence) {}
+    fn parse_precedence(&mut self, precedence: Precedence) {
+        self.advance();
+        if let ParseRule((Some(prefix_rule), _, _)) = TokenType::rule(self.previous.typee) {
+            prefix_rule(self);
+        } else {
+            self.error("expect expression");
+        }
+
+        while let ParseRule((_, _, current_precendence)) = TokenType::rule(self.current.typee)
+            && precedence <= current_precendence
+        {
+            self.advance();
+            let ParseRule((_, Some(infix_rule), _)) = TokenType::rule(self.previous.typee) else {
+                return;
+            };
+            infix_rule(self);
+        }
+    }
 
     fn emit_return(&self) {
         self.emit_byte(OpCode::Return as u8);
@@ -157,6 +193,7 @@ impl Parser {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, PartialOrd, FromPrimitive)]
 enum Precedence {
     None,
     Assignment,
@@ -169,6 +206,35 @@ enum Precedence {
     Unary,
     Call,
     Primary,
+}
+
+impl Precedence {
+    fn next(&self) -> Precedence {
+        FromPrimitive::from_u8(*self as u8 + 1).unwrap()
+    }
+}
+
+struct ParseRule<'iter>((Option<ParseFn<'iter>>, Option<ParseFn<'iter>>, Precedence));
+
+type ParseFn<'iter> = fn(&mut Parser<'iter>);
+
+impl TokenType {
+    fn rule<'a>(self) -> ParseRule<'a> {
+        match self {
+            LeftParen => ParseRule((Some(Parser::grouping), None, Precedence::None)),
+            Minus => ParseRule((Some(Parser::unary), Some(Parser::binary), Precedence::Term)),
+            Plus => ParseRule((None, Some(Parser::binary), Precedence::Term)),
+            Slash => ParseRule((None, Some(Parser::binary), Precedence::Factor)),
+            Star => ParseRule((None, Some(Parser::binary), Precedence::Factor)),
+            Number => ParseRule((Some(Parser::number), None, Precedence::None)),
+            RightParen | LeftBrace | RightBrace | Comma | Dot | Semicolon | Bang | BangEqual
+            | Equal | EqualEqual | Greater | GreaterEqual | Less | LessEqual | Identifier
+            | String | And | Class | Else | False | For | Fun | If | Nil | Or | Print | Return
+            | Super | This | True | Var | While | Error | Eof => {
+                ParseRule((None, None, Precedence::None))
+            }
+        }
+    }
 }
 
 fn error_at(token: &Token, message: &'static str, had_error: &mut bool, panic_mode: &mut bool) {

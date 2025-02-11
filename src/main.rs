@@ -1,4 +1,6 @@
 #![feature(coroutines, coroutine_trait, iter_from_coroutine)]
+#![feature(type_alias_impl_trait)]
+#![feature(let_chains)]
 
 use std::{env, fs, io::stdin, process::exit};
 
