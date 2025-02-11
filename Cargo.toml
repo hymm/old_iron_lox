@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [features]
 debug_trace_execution = []
+debug_print_code = []
 
 [dependencies]
 num-derive = "0.4.2"

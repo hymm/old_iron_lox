@@ -89,6 +89,12 @@ impl<'iter> Parser<'iter> {
 
     fn end_compiler(&self) {
         self.emit_return();
+
+        #[cfg(feature = "debug_print_code")]
+        if !self.had_error {
+            let chunk = unsafe { &mut *VM.chunk };
+            chunk.disassemble_chunk(self.source);
+        }
     }
 
     fn binary(&mut self) {
