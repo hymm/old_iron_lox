@@ -1,7 +1,6 @@
-use std::ptr::null_mut;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-
+use std::{fmt::Debug, ptr::null_mut};
 
 use crate::{
     chunk::{Chunk, OpCode},
@@ -50,6 +49,18 @@ struct Parser<'iter> {
     panic_mode: bool,
     token_iter: Box<dyn Iterator<Item = Token> + 'iter>,
     source: &'iter str,
+}
+
+impl<'iter> Debug for Parser<'iter> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Parser")
+            .field("current", &self.current)
+            .field("previous", &self.previous)
+            .field("had_error", &self.had_error)
+            .field("panic_mode", &self.panic_mode)
+            .field("source", &self.source)
+            .finish()
+    }
 }
 
 impl<'iter> Parser<'iter> {
@@ -124,7 +135,7 @@ impl<'iter> Parser<'iter> {
         let start = self.previous.start();
         let str_value = self
             .source
-            .get(start..start + self.previous.length)
+            .get(start..(start + self.previous.length))
             .unwrap();
         let value: f64 = str_value.parse::<f64>().unwrap();
         self.emit_constant(value);

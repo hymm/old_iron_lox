@@ -2,7 +2,7 @@
 #![feature(type_alias_impl_trait)]
 #![feature(let_chains)]
 
-use std::{env, fs, io::stdin, process::exit};
+use std::{env, fs, io::{stdin, Write}, process::exit};
 
 use vm::{free_vm, init_vm, interpret, InterpretError};
 
@@ -38,6 +38,7 @@ fn repl() {
         println!("Starting repl...");
         print!("> ");
 
+        std::io::stdout().flush().unwrap();
         stdin().read_line(&mut line).expect("Did not get line");
 
         let _ = interpret(&line);

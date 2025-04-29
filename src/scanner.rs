@@ -1,4 +1,4 @@
-use std::{iter::Peekable, ops::Coroutine, str::CharIndices};
+use std::{iter::Peekable, ops::Coroutine, str::CharIndices, fmt::Debug};
 use TokenType::*;
 
 // Note: Converting method in book to use a coroutine, because the pointer based approach seems like
@@ -94,7 +94,7 @@ fn number(
     start: usize,
     current_line: &mut usize,
 ) -> Token {
-    let mut length = 0;
+    let mut length = 1;
     while let Some((_pos, ch)) = char_indices.peek() {
         match ch {
             '0'..='9' | '.' => {
@@ -175,6 +175,7 @@ fn check_keyword(
     }
 }
 
+#[derive(Debug)]
 pub struct Token {
     pub typee: TokenType,
     // TODO: change this to be a slice into the original string?
@@ -186,6 +187,12 @@ pub struct Token {
 pub union TokenUnion {
     start: usize,
     message: &'static str,
+}
+
+impl Debug for TokenUnion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Ok(())
+    }
 }
 
 impl Token {
