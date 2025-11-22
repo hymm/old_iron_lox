@@ -5,8 +5,9 @@ use std::{fmt::Debug, ptr::null_mut};
 use crate::{
     chunk::{Chunk, OpCode},
     scanner::{
-        scan, Token,
+        Token,
         TokenType::{self, *},
+        scan,
     },
     value::Value,
 };
@@ -138,7 +139,7 @@ impl<'iter> Parser<'iter> {
             .get(start..(start + self.previous.length))
             .unwrap();
         let value: f64 = str_value.parse::<f64>().unwrap();
-        self.emit_constant(value);
+        self.emit_constant(Value::Double(value));
     }
 
     fn unary(&mut self) {

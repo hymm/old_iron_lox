@@ -37,7 +37,9 @@ impl From<u8> for OpCode {
 pub struct Chunk {
     pub(crate) count: usize,
     pub(crate) capacity: usize,
+    // array of op codes
     pub(crate) code: *mut u8,
+    // array of line that above code corresponds to
     pub(crate) lines: *mut usize,
     pub(crate) constants: ValueArray,
 }

@@ -1,10 +1,13 @@
 #![feature(coroutines, coroutine_trait, iter_from_coroutine)]
 #![feature(type_alias_impl_trait)]
-#![feature(let_chains)]
 
-use std::{env, fs, io::{stdin, Write}, process::exit};
+use std::{
+    env, fs,
+    io::{Write, stdin},
+    process::exit,
+};
 
-use vm::{free_vm, init_vm, interpret, InterpretError};
+use vm::{InterpretError, free_vm, init_vm, interpret};
 
 mod chunk;
 mod compiler;

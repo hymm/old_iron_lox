@@ -1,4 +1,4 @@
-use std::ptr::null_mut;
+use std::{fmt::Display, ptr::null_mut};
 
 use crate::{
     chunk::{Chunk, OpCode},
@@ -10,6 +10,7 @@ const STACK_MAX: usize = 256;
 
 struct Vm {
     chunk: *mut Chunk,
+    /// pointer to current instruction
     instruction_pointer: *mut u8,
     stack: [Value; STACK_MAX],
     stack_top: *mut Value,
@@ -25,7 +26,7 @@ unsafe impl Send for Vm {}
 static mut VM: Vm = Vm {
     chunk: null_mut(),
     instruction_pointer: null_mut(),
-    stack: [0.0; STACK_MAX],
+    stack: [Value::Double(0.0); STACK_MAX],
     stack_top: null_mut(),
 };
 
@@ -33,6 +34,18 @@ fn reset_stack() {
     unsafe {
         VM.stack_top = &mut VM.stack[0] as *mut Value;
     }
+}
+
+fn runtime_error(err: impl Display) {
+    // get the line number
+    let instruction_index = unsafe {
+        VM.instruction_pointer
+            .byte_sub((*VM.chunk).code as usize)
+            // we want the previous instruction, since the pointer was already advanced
+            .byte_sub(1)
+    };
+    let line = unsafe { (*VM.chunk).lines.add(*instruction_index as usize) };
+    print!("{err} {} in script\n", unsafe { *line });
 }
 
 fn push(value: Value) {
@@ -49,6 +62,10 @@ fn pop() -> Value {
         VM.stack_top = VM.stack_top.offset(-1);
     }
     unsafe { *VM.stack_top }
+}
+
+fn peek(distance: isize) -> Value {
+    unsafe { *VM.stack_top.offset(-1 - distance) }
 }
 
 // These methods might be a little too "C" and should be converted to a more rust styld.
@@ -95,9 +112,13 @@ fn run() -> Result<(), InterpretError> {
     macro_rules! binary_op {
         ($op:tt) => {
             {
-                let b = pop();
-                let a = pop();
-                push(a $op b);
+                let (Ok(a), Ok(b)) = (TryInto::<f64>::try_into(peek(0)), TryInto::<f64>::try_into(peek(1))) else {
+                    runtime_error("Operands must be a numbers.");
+                    return Err(InterpretError::RuntimeError);
+                };
+                pop();
+                pop();
+                push(Value::Double(a $op b));
             }
         };
     }
@@ -126,7 +147,12 @@ fn run() -> Result<(), InterpretError> {
                 push(constant);
             }
             OpCode::Negate => {
-                push(-pop());
+                let Ok(value) = TryInto::<f64>::try_into(peek(0)) else {
+                    runtime_error("Operand must be a number.");
+                    return Err(InterpretError::RuntimeError);
+                };
+                pop();
+                push(Value::Double(-value));
             }
             OpCode::Add => binary_op!(+),
             OpCode::Subtract => binary_op!(-),
