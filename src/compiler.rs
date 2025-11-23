@@ -123,6 +123,15 @@ impl<'iter> Parser<'iter> {
         }
     }
 
+    fn literal(&mut self) {
+        match self.previous.typee {
+            TokenType::False => self.emit_byte(OpCode::False as u8),
+            TokenType::Nil => self.emit_byte(OpCode::Nil as u8),
+            TokenType::True => self.emit_byte(OpCode::True as u8),
+            _ => unreachable!(),
+        }
+    }
+
     fn grouping(&mut self) {
         self.expression();
         self.consume(RightParen, "Expect ')' after expression.");
@@ -245,12 +254,11 @@ impl TokenType {
             Slash => ParseRule((None, Some(Parser::binary), Precedence::Factor)),
             Star => ParseRule((None, Some(Parser::binary), Precedence::Factor)),
             Number => ParseRule((Some(Parser::number), None, Precedence::None)),
+            Nil | False | True => ParseRule((Some(Parser::literal), None, Precedence::None)),
             RightParen | LeftBrace | RightBrace | Comma | Dot | Semicolon | Bang | BangEqual
             | Equal | EqualEqual | Greater | GreaterEqual | Less | LessEqual | Identifier
-            | String | And | Class | Else | False | For | Fun | If | Nil | Or | Print | Return
-            | Super | This | True | Var | While | Error | Eof => {
-                ParseRule((None, None, Precedence::None))
-            }
+            | String | And | Class | Else | For | Fun | If | Or | Print | Return | Super | This
+            | Var | While | Error | Eof => ParseRule((None, None, Precedence::None)),
         }
     }
 }

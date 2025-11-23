@@ -146,6 +146,9 @@ fn run() -> Result<(), InterpretError> {
                 let constant = read_constant();
                 push(constant);
             }
+            OpCode::Nil => push(Value::Nil),
+            OpCode::True => push(Value::Bool(true)),
+            OpCode::False => push(Value::Bool(false)),
             OpCode::Negate => {
                 let Ok(value) = TryInto::<f64>::try_into(peek(0)) else {
                     runtime_error("Operand must be a number.");

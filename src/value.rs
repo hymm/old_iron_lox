@@ -6,6 +6,7 @@ use crate::memory::{free_array, grow_array, grow_capacity};
 pub enum Value {
     Double(f64),
     Bool(bool),
+    Nil,
 }
 
 impl Display for Value {
@@ -13,6 +14,7 @@ impl Display for Value {
         match self {
             Value::Double(value) => value.fmt(f),
             Value::Bool(value) => value.fmt(f),
+            Value::Nil => f.write_str("Nil"),
         }
     }
 }
@@ -24,15 +26,6 @@ impl TryFrom<Value> for f64 {
         match value {
             Value::Double(value) => Ok(value),
             _ => Err("not a double"),
-        }
-    }
-}
-
-impl Value {
-    pub fn is_number(&self) -> bool {
-        match self {
-            Value::Double(_) => true,
-            _ => false,
         }
     }
 }

@@ -8,6 +8,9 @@ use crate::{
 #[repr(u8)]
 pub enum OpCode {
     Constant = 0,
+    Nil,
+    True,
+    False,
     Add,
     Subtract,
     Multiply,
