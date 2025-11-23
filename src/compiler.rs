@@ -104,7 +104,7 @@ impl<'iter> Parser<'iter> {
 
         #[cfg(feature = "debug_print_code")]
         if !self.had_error {
-            let chunk = unsafe { &mut *VM.chunk };
+            let chunk = unsafe { &mut *crate::vm::VM.chunk };
             chunk.disassemble_chunk(self.source);
         }
     }
@@ -115,10 +115,25 @@ impl<'iter> Parser<'iter> {
         self.parse_precedence(precedence.next());
 
         match operator_type {
+            BangEqual => self.emit_bytes(OpCode::Equal as u8, OpCode::Not as u8),
+            EqualEqual => self.emit_byte(OpCode::Equal as u8),
+            Greater => self.emit_byte(OpCode::Greater as u8),
+            GreaterEqual => self.emit_bytes(OpCode::Less as u8, OpCode::Not as u8),
+            Less => self.emit_byte(OpCode::Less as u8),
+            LessEqual => self.emit_bytes(OpCode::Greater as u8, OpCode::Not as u8),
             Plus => self.emit_byte(OpCode::Add as u8),
             Minus => self.emit_byte(OpCode::Subtract as u8),
             Star => self.emit_byte(OpCode::Multiply as u8),
             Slash => self.emit_byte(OpCode::Divide as u8),
+            _ => unreachable!(),
+        }
+    }
+
+    fn literal(&mut self) {
+        match self.previous.typee {
+            TokenType::False => self.emit_byte(OpCode::False as u8),
+            TokenType::Nil => self.emit_byte(OpCode::Nil as u8),
+            TokenType::True => self.emit_byte(OpCode::True as u8),
             _ => unreachable!(),
         }
     }
@@ -146,10 +161,10 @@ impl<'iter> Parser<'iter> {
         let operator_type = self.previous.typee;
         self.parse_precedence(Precedence::Unary);
 
-        if matches!(operator_type, Minus) {
-            self.emit_byte(OpCode::Negate as u8);
-        } else {
-            unreachable!();
+        match operator_type {
+            Bang => self.emit_byte(OpCode::Not as u8),
+            Minus => self.emit_byte(OpCode::Negate as u8),
+            _ => unreachable!(),
         }
     }
 
@@ -244,13 +259,16 @@ impl TokenType {
             Plus => ParseRule((None, Some(Parser::binary), Precedence::Term)),
             Slash => ParseRule((None, Some(Parser::binary), Precedence::Factor)),
             Star => ParseRule((None, Some(Parser::binary), Precedence::Factor)),
-            Number => ParseRule((Some(Parser::number), None, Precedence::None)),
-            RightParen | LeftBrace | RightBrace | Comma | Dot | Semicolon | Bang | BangEqual
-            | Equal | EqualEqual | Greater | GreaterEqual | Less | LessEqual | Identifier
-            | String | And | Class | Else | False | For | Fun | If | Nil | Or | Print | Return
-            | Super | This | True | Var | While | Error | Eof => {
-                ParseRule((None, None, Precedence::None))
+            Bang => ParseRule((Some(Parser::unary), None, Precedence::None)),
+            BangEqual | EqualEqual => ParseRule((None, Some(Parser::binary), Precedence::Equality)),
+            Greater | GreaterEqual | Less | LessEqual => {
+                ParseRule((None, Some(Parser::binary), Precedence::Comparison))
             }
+            Number => ParseRule((Some(Parser::number), None, Precedence::None)),
+            Nil | False | True => ParseRule((Some(Parser::literal), None, Precedence::None)),
+            RightParen | LeftBrace | RightBrace | Comma | Dot | Semicolon | Equal | Identifier
+            | String | And | Class | Else | For | Fun | If | Or | Print | Return | Super | This
+            | Var | While | Error | Eof => ParseRule((None, None, Precedence::None)),
         }
     }
 }

@@ -30,6 +30,13 @@ impl Chunk {
             OpCode::Multiply => simple_instruction("Multiply", offset),
             OpCode::Divide => simple_instruction("Divide", offset),
             OpCode::Constant => self.constant_instruction("Constant", offset),
+            OpCode::Nil => simple_instruction("Nil", offset),
+            OpCode::True => simple_instruction("True", offset),
+            OpCode::False => simple_instruction("False", offset),
+            OpCode::Equal => simple_instruction("Equal", offset),
+            OpCode::Greater => simple_instruction("Greater", offset),
+            OpCode::Less => simple_instruction("Less", offset),
+            OpCode::Not => simple_instruction("Not", offset),
             OpCode::Negate => simple_instruction("Negate", offset),
         }
     }

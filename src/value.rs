@@ -6,6 +6,7 @@ use crate::memory::{free_array, grow_array, grow_capacity};
 pub enum Value {
     Double(f64),
     Bool(bool),
+    Nil,
 }
 
 impl Display for Value {
@@ -13,6 +14,7 @@ impl Display for Value {
         match self {
             Value::Double(value) => value.fmt(f),
             Value::Bool(value) => value.fmt(f),
+            Value::Nil => f.write_str("Nil"),
         }
     }
 }
@@ -28,11 +30,13 @@ impl TryFrom<Value> for f64 {
     }
 }
 
-impl Value {
-    pub fn is_number(&self) -> bool {
-        match self {
-            Value::Double(_) => true,
-            _ => false,
+impl TryFrom<Value> for bool {
+    type Error = &'static str;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::Bool(value) => Ok(value),
+            _ => Err("not a bool"),
         }
     }
 }
@@ -78,4 +82,25 @@ impl ValueArray {
     pub fn print_value(&self, index: u8) {
         print!("{}", unsafe { *self.values.add(index as usize) })
     }
+}
+
+pub fn values_equal(a: Value, b: Value) -> bool {
+    match (a, b) {
+        (Value::Double(a), Value::Double(b)) => a == b,
+        (Value::Bool(a), Value::Bool(b)) => a == b,
+        (Value::Nil, Value::Nil) => true,
+        _ => unreachable!(),
+    }
+}
+
+pub fn is_nil(value: Value) -> bool {
+    matches!(value, Value::Nil)
+}
+
+pub fn is_bool(value: Value) -> bool {
+    matches!(value, Value::Bool(_))
+}
+
+pub fn is_number(value: Value) -> bool {
+    matches!(value, Value::Double(_))
 }

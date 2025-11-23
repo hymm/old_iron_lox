@@ -3,13 +3,13 @@ use std::{fmt::Display, ptr::null_mut};
 use crate::{
     chunk::{Chunk, OpCode},
     compiler::compile,
-    value::Value,
+    value::{Value, is_bool, is_nil, values_equal},
 };
 
 const STACK_MAX: usize = 256;
 
-struct Vm {
-    chunk: *mut Chunk,
+pub struct Vm {
+    pub(crate) chunk: *mut Chunk,
     /// pointer to current instruction
     instruction_pointer: *mut u8,
     stack: [Value; STACK_MAX],
@@ -23,7 +23,7 @@ unsafe impl Send for Vm {}
 
 // TODO: this is very unsafe and probably will have UB. But we do it to mirror the book and will refactor
 // later
-static mut VM: Vm = Vm {
+pub static mut VM: Vm = Vm {
     chunk: null_mut(),
     instruction_pointer: null_mut(),
     stack: [Value::Double(0.0); STACK_MAX],
@@ -68,6 +68,10 @@ fn peek(distance: isize) -> Value {
     unsafe { *VM.stack_top.offset(-1 - distance) }
 }
 
+fn is_falsey(value: Value) -> bool {
+    is_nil(value) || TryFrom::try_from(value).unwrap_or(false)
+}
+
 // These methods might be a little too "C" and should be converted to a more rust styld.
 pub fn init_vm() {
     reset_stack();
@@ -110,7 +114,7 @@ fn run() -> Result<(), InterpretError> {
     }
 
     macro_rules! binary_op {
-        ($op:tt) => {
+        ($variant:expr, $op:tt) => {
             {
                 let (Ok(a), Ok(b)) = (TryInto::<f64>::try_into(peek(0)), TryInto::<f64>::try_into(peek(1))) else {
                     runtime_error("Operands must be a numbers.");
@@ -118,7 +122,7 @@ fn run() -> Result<(), InterpretError> {
                 };
                 pop();
                 pop();
-                push(Value::Double(a $op b));
+                push($variant(a $op b));
             }
         };
     }
@@ -146,6 +150,14 @@ fn run() -> Result<(), InterpretError> {
                 let constant = read_constant();
                 push(constant);
             }
+            OpCode::Nil => push(Value::Nil),
+            OpCode::True => push(Value::Bool(true)),
+            OpCode::False => push(Value::Bool(false)),
+            OpCode::Equal => {
+                let b = pop();
+                let a = pop();
+                push(Value::Bool(values_equal(a, b)));
+            }
             OpCode::Negate => {
                 let Ok(value) = TryInto::<f64>::try_into(peek(0)) else {
                     runtime_error("Operand must be a number.");
@@ -154,10 +166,13 @@ fn run() -> Result<(), InterpretError> {
                 pop();
                 push(Value::Double(-value));
             }
-            OpCode::Add => binary_op!(+),
-            OpCode::Subtract => binary_op!(-),
-            OpCode::Multiply => binary_op!(*),
-            OpCode::Divide => binary_op!(/),
+            OpCode::Greater => binary_op!(Value::Bool, >),
+            OpCode::Less => binary_op!(Value::Bool, <),
+            OpCode::Add => binary_op!(Value::Double, +),
+            OpCode::Subtract => binary_op!(Value::Double, -),
+            OpCode::Multiply => binary_op!(Value::Double, *),
+            OpCode::Divide => binary_op!(Value::Double, /),
+            OpCode::Not => push(Value::Bool(is_falsey(pop()))),
             OpCode::Return => {
                 println!("{}", pop());
                 return Ok(());
