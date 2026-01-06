@@ -96,11 +96,3 @@ pub fn values_equal(a: Value, b: Value) -> bool {
 pub fn is_nil(value: Value) -> bool {
     matches!(value, Value::Nil)
 }
-
-pub fn is_bool(value: Value) -> bool {
-    matches!(value, Value::Bool(_))
-}
-
-pub fn is_number(value: Value) -> bool {
-    matches!(value, Value::Double(_))
-}

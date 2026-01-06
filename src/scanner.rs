@@ -1,5 +1,5 @@
-use std::{iter::Peekable, ops::Coroutine, str::CharIndices, fmt::Debug};
 use TokenType::*;
+use std::{fmt::Debug, iter::Peekable, ops::Coroutine, str::CharIndices};
 
 // Note: Converting method in book to use a coroutine, because the pointer based approach seems like
 // it'll be too much of a mess.
@@ -134,7 +134,7 @@ fn identifier_type(source: &str, start: usize) -> TokenType {
         "a" => check_keyword(source, start + 1, 2, "nd", And),
         "c" => check_keyword(source, start + 1, 4, "lass", Class),
         "e" => check_keyword(source, start + 1, 3, "lse", Else),
-        "f" => match source.get(start + 1..start + 1) {
+        "f" => match source.get(start + 1..=start + 1) {
             Some("a") => check_keyword(source, start + 2, 3, "lse", False),
             Some("o") => check_keyword(source, start + 2, 1, "r", For),
             Some("u") => check_keyword(source, start + 2, 1, "n", Fun),
@@ -146,7 +146,7 @@ fn identifier_type(source: &str, start: usize) -> TokenType {
         "p" => check_keyword(source, start + 1, 4, "rint", Print),
         "r" => check_keyword(source, start + 1, 5, "eturn", Return),
         "s" => check_keyword(source, start + 1, 4, "uper", Super),
-        "t" => match source.get(start + 1..start + 1) {
+        "t" => match source.get(start + 1..=start + 1) {
             Some("h") => check_keyword(source, start + 2, 2, "is", This),
             Some("r") => check_keyword(source, start + 2, 2, "ue", True),
             _ => Identifier,

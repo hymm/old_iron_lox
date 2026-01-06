@@ -2,7 +2,7 @@ use crate::chunk::{Chunk, OpCode};
 
 #[allow(unused)]
 impl Chunk {
-    pub fn disassemble_chunk(&self, name: &'static str) {
+    pub fn disassemble_chunk(&self, name: String) {
         println!("== {} ==", name);
         let mut offset: isize = 0;
         while offset < self.count as isize {

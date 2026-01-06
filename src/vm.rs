@@ -3,7 +3,7 @@ use std::{fmt::Display, ptr::null_mut};
 use crate::{
     chunk::{Chunk, OpCode},
     compiler::compile,
-    value::{Value, is_bool, is_nil, values_equal},
+    value::{Value, is_nil, values_equal},
 };
 
 const STACK_MAX: usize = 256;
@@ -13,7 +13,8 @@ pub struct Vm {
     /// pointer to current instruction
     instruction_pointer: *mut u8,
     stack: [Value; STACK_MAX],
-    stack_top: *mut Value,
+    /// index of next empty stack slot
+    stack_top: usize,
 }
 
 // TODO: not really send and sync, but we do this to make it a global static.
@@ -27,49 +28,48 @@ pub static mut VM: Vm = Vm {
     chunk: null_mut(),
     instruction_pointer: null_mut(),
     stack: [Value::Double(0.0); STACK_MAX],
-    stack_top: null_mut(),
+    stack_top: 0,
 };
 
 fn reset_stack() {
     unsafe {
-        VM.stack_top = &mut VM.stack[0] as *mut Value;
+        VM.stack_top = 0;
     }
 }
 
 fn runtime_error(err: impl Display) {
     // get the line number
-    let instruction_index = unsafe {
-        VM.instruction_pointer
-            .byte_sub((*VM.chunk).code as usize)
-            // we want the previous instruction, since the pointer was already advanced
-            .byte_sub(1)
-    };
-    let line = unsafe { (*VM.chunk).lines.add(*instruction_index as usize) };
-    print!("{err} {} in script\n", unsafe { *line });
+    let instruction_index = unsafe { VM.instruction_pointer.offset_from((*VM.chunk).code) };
+    // we want the previous instruction, since the pointer was already advanced
+    let instruction_index = instruction_index - 1;
+    let line = unsafe { (*VM.chunk).lines.add(instruction_index as usize) };
+    println!("{err} {} in script", unsafe { *line });
+    reset_stack();
 }
 
 fn push(value: Value) {
     unsafe {
-        *VM.stack_top = value;
+        VM.stack[VM.stack_top] = value;
     }
     unsafe {
-        VM.stack_top = VM.stack_top.offset(1);
+        VM.stack_top += 1;
     }
 }
 
 fn pop() -> Value {
     unsafe {
-        VM.stack_top = VM.stack_top.offset(-1);
+        VM.stack_top -= 1;
     }
-    unsafe { *VM.stack_top }
+    unsafe { VM.stack[VM.stack_top] }
 }
 
 fn peek(distance: isize) -> Value {
-    unsafe { *VM.stack_top.offset(-1 - distance) }
+    let peek = (1 + distance) as usize;
+    unsafe { VM.stack[VM.stack_top - peek] }
 }
 
 fn is_falsey(value: Value) -> bool {
-    is_nil(value) || TryFrom::try_from(value).unwrap_or(false)
+    is_nil(value) || !TryFrom::try_from(value).unwrap_or(true)
 }
 
 // These methods might be a little too "C" and should be converted to a more rust styld.
@@ -116,7 +116,7 @@ fn run() -> Result<(), InterpretError> {
     macro_rules! binary_op {
         ($variant:expr, $op:tt) => {
             {
-                let (Ok(a), Ok(b)) = (TryInto::<f64>::try_into(peek(0)), TryInto::<f64>::try_into(peek(1))) else {
+                let (Ok(b), Ok(a)) = (TryInto::<f64>::try_into(peek(0)), TryInto::<f64>::try_into(peek(1))) else {
                     runtime_error("Operands must be a numbers.");
                     return Err(InterpretError::RuntimeError);
                 };
@@ -181,6 +181,7 @@ fn run() -> Result<(), InterpretError> {
     }
 }
 
+#[derive(Debug)]
 pub enum InterpretError {
     CompileError,
     RuntimeError,

@@ -37,14 +37,15 @@ fn main() {
 
 fn repl() {
     let mut line = String::new();
+    println!("Starting repl...");
     loop {
-        println!("Starting repl...");
         print!("> ");
 
         std::io::stdout().flush().unwrap();
         stdin().read_line(&mut line).expect("Did not get line");
 
-        let _ = interpret(&line);
+        interpret(&line).unwrap();
+        line.clear();
     }
 }
 

@@ -83,7 +83,7 @@ impl<'iter> Parser<'iter> {
 
     fn consume(&mut self, token: TokenType, message: &'static str) {
         if self.current.typee == token {
-            self.token_iter.next();
+            self.advance();
             return;
         }
 
@@ -105,7 +105,7 @@ impl<'iter> Parser<'iter> {
         #[cfg(feature = "debug_print_code")]
         if !self.had_error {
             let chunk = unsafe { &mut *crate::vm::VM.chunk };
-            chunk.disassemble_chunk(self.source);
+            chunk.disassemble_chunk(self.source.to_string());
         }
     }
 
